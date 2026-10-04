@@ -1,0 +1,110 @@
+# Recovery policy configuration
+
+risk:
+  low_max_score: 24
+  medium_max_score: 49
+  high_max_score: 74
+
+  approval_required_levels:
+    - high
+    - critical
+
+  maximum_planned_risk: critical
+  allow_action_risk_escalation: false
+
+  require_approval_for_data_loss: true
+  require_approval_for_critical_services: true
+  block_unknown_action_risk: true
+
+execution:
+  default_timeout_seconds: 30
+  maximum_attempts: 3
+
+# Only enabled actions are included in the executor allowlist.
+# Register actual execution handlers before enabling live recovery.
+actions:
+  restart_service:
+    enabled: true
+    risk_level: medium
+    requires_approval: false
+    priority: high
+    timeout_seconds: 30
+    max_attempts: 2
+    rollback_action_type: restore_service
+    expected_health: healthy
+    description: Restart an unhealthy service.
+    parameters:
+      reason: incident_recovery
+
+  restore_service:
+    enabled: false
+    risk_level: high
+    requires_approval: true
+    priority: high
+    timeout_seconds: 30
+    max_attempts: 1
+    description: Restore a service to a known-good state.
+    parameters:
+      reason: recovery_rollback
+
+# Explicit service-level allowlists.
+# Services without an entry are not eligible for planned recovery actions.
+service_recovery:
+  database:
+    allowed_actions:
+      - restart_service
+
+  cache:
+    allowed_actions:
+      - restart_service
+
+  api:
+    allowed_actions:
+      - restart_service
+
+  worker:
+    allowed_actions:
+      - restart_service
+
+  notification:
+    allowed_actions:
+      - restart_service
+
+# Rules used by the recovery planner to select possible actions.
+selection_rules:
+  - enabled: true
+    symptoms:
+      - high_cpu
+      - service_unhealthy
+    suspected_causes:
+      - resource_exhaustion
+      - service_failure
+    actions:
+      - restart_service
+
+  - enabled: true
+    symptoms:
+      - high_memory
+      - service_unhealthy
+    suspected_causes:
+      - resource_exhaustion
+      - service_failure
+    actions:
+      - restart_service
+
+  - enabled: true
+    symptoms:
+      - high_error_rate
+      - high_latency
+    suspected_causes:
+      - application_failure
+      - performance_degradation
+    actions:
+      - restart_service
+
+# Planner guardrails
+planning:
+  require_known_service: true
+  require_action_allowlist: true
+  reject_disabled_actions: true
+  require_human_approval_before_high_risk_execution: true

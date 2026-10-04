@@ -1,0 +1,74 @@
+# Service dependency map for the Risk-Aware Recovery Controller.
+#
+# depends_on:
+#   Services that must remain healthy or be considered before recovery.
+#
+# criticality:
+#   Business importance of the service: low, medium, high, or critical.
+#
+# allowed_actions:
+#   Recovery action types permitted for the service.
+#
+# recovery_order:
+#   Lower values indicate services that should generally be evaluated first.
+#
+# Safety note:
+#   This file defines dependencies and policy metadata. It does not execute
+#   recovery actions or replace health checks and approval requirements.
+
+services:
+  database:
+    criticality: critical
+    depends_on: []
+    recovery_order: 10
+    allowed_actions:
+      - restart_service
+    description: Core persistent data store.
+
+  cache:
+    criticality: high
+    depends_on:
+      - database
+    recovery_order: 20
+    allowed_actions:
+      - restart_service
+    description: Shared cache used by application services.
+
+  api:
+    criticality: critical
+    depends_on:
+      - database
+      - cache
+    recovery_order: 30
+    allowed_actions:
+      - restart_service
+    description: Primary API serving application requests.
+
+  worker:
+    criticality: medium
+    depends_on:
+      - database
+      - cache
+    recovery_order: 40
+    allowed_actions:
+      - restart_service
+    description: Background job processing service.
+
+  notification:
+    criticality: medium
+    depends_on:
+      - api
+    recovery_order: 50
+    allowed_actions:
+      - restart_service
+    description: Notification processing service.
+
+# Dependency interpretation:
+#
+# database -> cache -> api
+# database -> cache -> worker
+# api -> notification
+#
+# The dependency graph describes operational relationships. Confirm that
+# these relationships match your actual architecture before enabling live
+# recovery.

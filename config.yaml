@@ -1,0 +1,92 @@
+# Risk-Aware Recovery Controller application configuration
+
+environment: development
+
+# Execution stays in dry-run mode unless live execution is explicitly
+# enabled in both this file and the environment.
+execution:
+  mode: dry_run
+  allow_live_execution: false
+  audit_log_path: recovery_audit.jsonl
+  default_timeout_seconds: 30
+  maximum_attempts: 3
+
+# Monitoring and incident detection settings
+monitoring:
+  enabled: false
+  provider: prometheus
+  base_url: http://localhost:9090
+  polling_interval_seconds: 30
+  request_timeout_seconds: 10
+
+incident_detection:
+  minimum_signals: 1
+  correlation_window_seconds: 300
+
+  cause_mappings:
+    high_cpu:
+      - resource_exhaustion
+    high_memory:
+      - resource_exhaustion
+    high_error_rate:
+      - application_failure
+    high_latency:
+      - performance_degradation
+    service_unhealthy:
+      - service_failure
+
+  rules:
+    - name: high_cpu
+      metric: cpu_usage_percent
+      operator: ">="
+      threshold: 90
+      symptom: high_cpu
+      severity: error
+      enabled: true
+
+    - name: high_memory
+      metric: memory_usage_percent
+      operator: ">="
+      threshold: 90
+      symptom: high_memory
+      severity: error
+      enabled: true
+
+    - name: high_error_rate
+      metric: error_rate_percent
+      operator: ">="
+      threshold: 5
+      symptom: high_error_rate
+      severity: error
+      enabled: true
+
+    - name: high_latency
+      metric: latency_ms
+      operator: ">="
+      threshold: 1000
+      symptom: high_latency
+      severity: warning
+      enabled: true
+
+    - name: service_unhealthy
+      metric: health_status
+      operator: "=="
+      threshold: 0
+      symptom: service_unhealthy
+      severity: critical
+      enabled: true
+
+# Business importance of services
+service_criticality:
+  database: critical
+  api: critical
+  cache: high
+  worker: medium
+  notification: medium
+
+# Operational safeguards
+safety:
+  require_human_approval_for_high_risk: true
+  require_human_approval_for_critical_risk: true
+  reject_unknown_actions: true
+  preserve_audit_logs: true
